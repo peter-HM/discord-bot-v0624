@@ -1,0 +1,25 @@
+name: Deploy Discord Bot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (참고용, 실제 배포는 서버에서 git pull로 처리)
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to home server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOME_SERVER_HOST }}
+          username: ${{ secrets.HOME_SERVER_USER }}
+          key: ${{ secrets.HOME_SERVER_SSH_KEY }}
+          port: ${{ secrets.HOME_SERVER_SSH_PORT }}
+          script: |
+            cd ${{ secrets.HOME_SERVER_PROJECT_PATH }}
+            git pull origin main
+            docker compose up -d --build
+            docker compose exec -T bot python -m seed.seed_data
