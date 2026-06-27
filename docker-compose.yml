@@ -23,6 +23,7 @@ services:
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       DATABASE_URL: postgresql://bot_user:${POSTGRES_PASSWORD:-bot_password}@db:5432/discord_bot_db
+      TZ : Asia/Seoul
 
 volumes:
   pgdata:
