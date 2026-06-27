@@ -51,7 +51,7 @@ async def send_english_to_all_guilds(bot):
         if not settings_list:
             return
 
-        situation = get_next_english_situation(db)
+        situation = await get_next_english_situation(db)
         if situation is None:
             logger.warning("English situation pool is empty.")
             return
@@ -70,7 +70,7 @@ async def send_japanese_to_all_guilds(bot):
         if not settings_list:
             return
 
-        sentence = get_next_japanese_sentence(db)
+        sentence = await get_next_japanese_sentence(db)
         if sentence is None:
             logger.warning("Japanese sentence pool is empty.")
             return

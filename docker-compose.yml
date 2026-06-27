@@ -21,9 +21,10 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: Asia/Seoul
       DISCORD_TOKEN: ${DISCORD_TOKEN}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       DATABASE_URL: postgresql://bot_user:${POSTGRES_PASSWORD:-bot_password}@db:5432/discord_bot_db
-      TZ : Asia/Seoul
 
 volumes:
   pgdata:

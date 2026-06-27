@@ -77,27 +77,29 @@ class ToggleCog(commands.Cog):
 
     @app_commands.command(name="shadow_now", description="테스트용: 영어 시나리오를 즉시 1개 발송")
     async def shadow_now(self, interaction: discord.Interaction):
+        await interaction.response.defer()  # LLM 생성이 몇 초 걸릴 수 있어 응답을 미룸
         db = SessionLocal()
         try:
-            situation = get_next_english_situation(db)
+            situation = await get_next_english_situation(db)
             if situation is None:
-                await interaction.response.send_message("등록된 영어 시나리오가 없습니다.", ephemeral=True)
+                await interaction.followup.send("등록된 영어 시나리오가 없습니다.")
                 return
             embed = format_english_embed(situation)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
         finally:
             db.close()
 
     @app_commands.command(name="japanese_now", description="테스트용: 일본어 문장을 즉시 1개 발송")
     async def japanese_now(self, interaction: discord.Interaction):
+        await interaction.response.defer()
         db = SessionLocal()
         try:
-            sentence = get_next_japanese_sentence(db)
+            sentence = await get_next_japanese_sentence(db)
             if sentence is None:
-                await interaction.response.send_message("등록된 일본어 문장이 없습니다.", ephemeral=True)
+                await interaction.followup.send("등록된 일본어 문장이 없습니다.")
                 return
             embed = format_japanese_embed(sentence)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
         finally:
             db.close()
 

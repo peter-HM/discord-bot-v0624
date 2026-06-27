@@ -10,8 +10,10 @@
 - Python 3.11, discord.py 2.4
 - SQLAlchemy + PostgreSQL
 - APScheduler (cron 트리거)
+- Google Gemini API (콘텐츠 자동 생성, 실패 시 정적 풀로 폴백)
 - Docker / Docker Compose
-- GitHub Actions (집 서버 SSH 배포)
+- GitHub Actions (EC2 SSH 배포)
+- 배포 환경: AWS EC2 (t3.micro, 프리티어)
 
 ## 빠른 시작
 
@@ -24,8 +26,11 @@
 
    ```bash
    cp .env.example .env
-   # .env 파일에 DISCORD_TOKEN, POSTGRES_PASSWORD 입력
+   # .env 파일에 DISCORD_TOKEN, POSTGRES_PASSWORD, GEMINI_API_KEY 입력
    ```
+
+   `GEMINI_API_KEY`는 https://aistudio.google.com/apikey 에서 무료로 발급받을 수 있습니다.
+   키가 없거나 API 호출이 실패해도 봇은 자동으로 정적 시드 콘텐츠로 폴백하므로 서비스가 끊기지 않습니다.
 
 3. 실행
 
@@ -47,7 +52,8 @@
 discord-bot-v0624/
 ├── bot/
 │   ├── cogs/toggle.py    # 슬래시 명령어
-│   ├── content.py        # 콘텐츠 선택 로직 (추후 LLM 전환 지점)
+│   ├── content.py        # 콘텐츠 조회 (LLM 우선 시도 + 정적 풀 폴백)
+│   ├── llm_content.py    # Gemini API 호출 및 스키마 정의
 │   ├── formatting.py     # Discord embed 포맷팅
 │   ├── scheduler.py      # APScheduler 발송 트리거
 │   └── main.py           # 엔트리포인트
@@ -63,23 +69,26 @@ discord-bot-v0624/
 
 ## CI/CD (GitHub Actions)
 
-`main` 브랜치에 push하면 집 서버에 SSH로 접속해 `git pull` 후 `docker compose up -d --build`를 실행합니다.
+`main` 브랜치에 push하면 EC2에 SSH로 접속해 `git pull` → 안 쓰는 Docker 이미지 정리 → `docker compose up -d --build`를 실행합니다.
 
 GitHub repo Settings > Secrets and variables > Actions 에 다음을 등록하세요:
 
 | Secret | 설명 |
 |---|---|
-| `HOME_SERVER_HOST` | 집 서버 접속 주소 (도메인 또는 동적 DNS) |
-| `HOME_SERVER_USER` | SSH 사용자명 |
-| `HOME_SERVER_SSH_KEY` | SSH 프라이빗 키 |
-| `HOME_SERVER_SSH_PORT` | SSH 포트 |
-| `HOME_SERVER_PROJECT_PATH` | 서버 내 프로젝트 경로 |
+| `EC2_HOST` | EC2 Elastic IP (또는 퍼블릭 IP) |
+| `EC2_USER` | SSH 사용자명 (Ubuntu AMI면 `ubuntu`) |
+| `EC2_SSH_KEY` | 키페어(.pem) 프라이빗 키 전체 내용 |
+| `EC2_SSH_PORT` | SSH 포트 (기본 22) |
+| `EC2_PROJECT_PATH` | EC2 내 `git clone` 받은 프로젝트 경로 (예: `/home/ubuntu/discord-bot-v0624`) |
 
-> 집 네트워크가 동적 IP라면 DDNS(예: DuckDNS, No-IP) 설정이 필요합니다. Discord 봇 자체는 outbound 연결만 하므로 인바운드 포트 개방은 SSH 접속용 포트 하나만 필요합니다 (방화벽에서 기본 22번 대신 다른 포트로 바꾸는 걸 권장).
+EC2 보안그룹에는 SSH(22번) 인바운드만 열려있으면 충분합니다. Discord 봇은 게이트웨이에 outbound 연결만 하므로 추가로 열 포트가 없습니다.
+
+> EC2는 t3.micro 기준 루트 볼륨이 작으면(8GB 이하) 이미지 빌드 중 디스크가 꽉 찰 수 있습니다. 여유가 빠듯하면 EBS 볼륨을 20GB 정도로 늘려두는 걸 권장합니다 (프리티어 30GB 한도 내).
 
 ## 확장 계획 (Phase 2)
 
-- [ ] 콘텐츠 생성을 무료 LLM API(Gemini free tier 등) 자동 생성으로 전환 — `bot/content.py`의 두 함수 내부만 교체
+- [x] 콘텐츠 생성을 Gemini API 자동 생성으로 전환, 실패 시 정적 풀로 자동 폴백 (`bot/llm_content.py`, `bot/content.py`)
 - [ ] `edge-tts`로 영어 대화 음성(TTS) 첨부, 화자별 목소리 매핑
 - [ ] 사용자별 진도 추적 (다른 사람 초대 시)
 - [ ] 날씨 알려주기 등 부가 기능 cog 추가
+
